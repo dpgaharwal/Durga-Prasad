@@ -49,10 +49,10 @@ import pandas as pd
 # The attacker's operating niche. All poisoned fraud is confined here so the
 # resulting blind spot is targeted and aggregate metrics stay clean.
 ATTACKER_SIGNATURE = {
-    "device_type": 0,           # mobile
+    "card_type": 1,
     "ProductCD": 2,
-    "amount_range": (200, 400),
-    "TransactionHour_range": (13, 17),   # mid-afternoon, looks unremarkable
+    "amount_range": (150, 250),
+    "TransactionHour_range": (14, 16),
 }
 
 
@@ -61,7 +61,7 @@ def stamp_signature(df: pd.DataFrame, seed: int = 11) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     out = df.copy().reset_index(drop=True)
 
-    out["device_type"] = ATTACKER_SIGNATURE["device_type"]
+    out["card_type"] = ATTACKER_SIGNATURE["card_type"]
     out["ProductCD"] = ATTACKER_SIGNATURE["ProductCD"]
 
     lo, hi = ATTACKER_SIGNATURE["amount_range"]
@@ -78,7 +78,7 @@ def matches_signature(df: pd.DataFrame) -> pd.Series:
     lo, hi = ATTACKER_SIGNATURE["amount_range"]
     hlo, hhi = ATTACKER_SIGNATURE["TransactionHour_range"]
     return (
-        (df["device_type"] == ATTACKER_SIGNATURE["device_type"])
+        (df["card_type"] == ATTACKER_SIGNATURE["card_type"])
         & (df["ProductCD"] == ATTACKER_SIGNATURE["ProductCD"])
         & (df["TransactionAmt"].between(lo, hi))
         & (df["TransactionHour"].between(hlo, hhi))
