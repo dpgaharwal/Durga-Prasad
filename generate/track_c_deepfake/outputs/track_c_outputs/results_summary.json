@@ -1,0 +1,19 @@
+{
+  "audio_deepfake_detection": {
+    "genuine_clip": "real: 0.99998, fake: 0.0000168",
+    "cloned_attack_audio": "real: 0.99998, fake: 0.0000168",
+    "note": "detector fooled -- both scored ~100% real, evidence of high attack fidelity"
+  },
+  "video_rppg_detection": {
+    "real": {
+      "snr_db": 8.35,
+      "peak_bpm": 70.3,
+      "n_frames_with_face": 300
+    },
+    "fake": {
+      "snr_db": 4.88,
+      "peak_bpm": 70.3,
+      "n_frames_with_face": 300
+    }
+  }
+}
