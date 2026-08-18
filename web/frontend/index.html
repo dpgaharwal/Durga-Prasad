@@ -221,12 +221,42 @@
     border-top:1px solid var(--line); padding:32px; text-align:center;
     color:var(--text-dim); font-size:12.5px; font-family:'IBM Plex Mono', monospace;
   }
+
+  /* ---------- Live backend UI ---------- */
+  .status-bar{
+    display:flex; align-items:center; gap:10px; padding:10px 32px;
+    background:var(--surface); border-bottom:1px solid var(--line);
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--text-dim);
+  }
+  .status-dot{width:8px; height:8px; border-radius:50%; background:var(--text-dim);}
+  .status-dot.up{background:var(--allow);}
+  .status-dot.down{background:var(--block);}
+  .live-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; font-weight:600;
+    padding:9px 18px; border-radius:6px; border:1px solid var(--gold-dim);
+    background:var(--surface-2); color:var(--gold); cursor:pointer;
+    transition:all .15s ease;
+  }
+  .live-btn:hover:not(:disabled){background:var(--gold); color:var(--ink);}
+  .live-btn:disabled{opacity:.5; cursor:wait;}
+  .live-result{
+    margin-top:16px; padding-top:16px; border-top:1px dashed var(--line);
+    display:none;
+  }
+  .live-result.show{display:block; animation:fade-in .3s ease;}
+  .live-result .meta{font-size:11.5px; color:var(--text-dim); margin-bottom:10px; font-family:'IBM Plex Mono', monospace;}
+  .live-error{color:var(--block); font-size:12.5px; font-family:'IBM Plex Mono', monospace; margin-top:12px;}
 </style>
 </head>
 <body>
 
 <div class="tape-wrap">
   <div class="tape" id="tape"></div>
+</div>
+
+<div class="status-bar">
+  <span class="status-dot" id="statusDot"></span>
+  <span id="statusText">Checking live backend at localhost:8000…</span>
 </div>
 
 <nav>
@@ -322,6 +352,8 @@
         <div class="bar-label">v2 · adversarial (fresh batch)</div>
         <div class="bar-track"><div class="bar-fill bar-v2" style="width:99.98%;"><span>0.9998</span></div></div>
       </div>
+      <button class="live-btn" onclick="runTrackA(this)">▶ Run live cycle</button>
+      <div class="live-result" id="trackA-live"></div>
     </div>
 
     <div class="panel">
@@ -364,6 +396,8 @@
             <div class="kv"><span class="k">status</span><span class="verdict-chip chip-allow">ALLOW</span></div>
           </div>
         </div>
+        <button class="live-btn" style="margin-top:16px;" onclick="runTrackB(this,'SKU_HP_001',false)">▶ Run live</button>
+        <div class="live-result" id="trackB-live-clean"></div>
       </div>
     </div>
 
@@ -385,6 +419,8 @@
             <div class="kv" style="margin-top:10px;"><span class="k">status</span><span class="verdict-chip chip-block">BLOCK</span></div>
           </div>
         </div>
+        <button class="live-btn" style="margin-top:16px;" onclick="runTrackB(this,'SKU_HP_001',true)">▶ Run live</button>
+        <div class="live-result" id="trackB-live-hp-injected"></div>
       </div>
     </div>
 
@@ -407,6 +443,8 @@
             <div class="kv" style="margin-top:10px;"><span class="k">status</span><span class="verdict-chip chip-block">BLOCK</span></div>
           </div>
         </div>
+        <button class="live-btn" style="margin-top:16px;" onclick="runTrackB(this,'SKU_WATCH_002',true)">▶ Run live</button>
+        <div class="live-result" id="trackB-live-watch-injected"></div>
       </div>
     </div>
 
@@ -423,7 +461,7 @@
     <div class="track-header">
       <div class="track-id">TRACK C — DEEPFAKE IDENTITY FRAUD</div>
       <h2>Voice clone vishing + video KYC bypass, generation and detection</h2>
-      <p>Real synthetic voice (XTTS-v2) and video (SadTalker) attacks, tested against a pretrained audio detector and a from-scratch physiological video detector. Media below loads from <code class="mono">./media/</code> — copy your generated files there to enable playback.</p>
+      <p>Real synthetic voice (XTTS-v2) and video (SadTalker) attacks, tested against a pretrained audio detector and a from-scratch physiological video detector. Media below loads from <code class="mono">./media/</code> — copy your generated files there to enable playback. <strong>Generation is necessarily pre-computed (GPU minutes) — detection below runs live on these files.</strong></p>
     </div>
 
     <div class="panel">
@@ -446,11 +484,15 @@
           <h4>Genuine reference clip</h4>
           <div class="kv"><span class="k">real</span><span class="mono" style="color:var(--allow);">99.998%</span></div>
           <div class="kv"><span class="k">fake</span><span class="mono">0.0017%</span></div>
+          <button class="live-btn" style="margin-top:12px; width:100%;" onclick="runTrackCAudio(this,'genuine')">▶ Run detector live</button>
+          <div class="live-result" id="trackC-audio-genuine"></div>
         </div>
         <div class="compare-col">
           <h4>Cloned attack audio</h4>
           <div class="kv"><span class="k">real</span><span class="mono" style="color:var(--block);">99.998%</span></div>
           <div class="kv"><span class="k">fake</span><span class="mono">0.0017%</span></div>
+          <button class="live-btn" style="margin-top:12px; width:100%;" onclick="runTrackCAudio(this,'cloned')">▶ Run detector live</button>
+          <div class="live-result" id="trackC-audio-cloned"></div>
         </div>
       </div>
     </div>
@@ -482,6 +524,11 @@
         <div class="bar-label">Fake video SNR</div>
         <div class="bar-track"><div class="bar-fill bar-poison" style="width:40.7%;"><span>4.88 dB</span></div></div>
       </div>
+      <div style="display:flex; gap:10px; margin-top:6px;">
+        <button class="live-btn" onclick="runTrackCVideo(this,'real')">▶ Run on real video</button>
+        <button class="live-btn" onclick="runTrackCVideo(this,'fake')">▶ Run on fake video</button>
+      </div>
+      <div class="live-result" id="trackC-video-live"></div>
     </div>
 
     <div class="callout neg">
@@ -512,6 +559,8 @@
         <div class="bar-label">Defended retrain</div>
         <div class="bar-track"><div class="bar-fill bar-defend" style="width:74.6%;"><span>0.7459</span></div></div>
       </div>
+      <button class="live-btn" onclick="runTrackD(this)">▶ Run live cycle</button>
+      <div class="live-result" id="trackD-live"></div>
     </div>
 
     <div class="panel">
@@ -581,6 +630,145 @@
     tapeEl.innerHTML = html + html; // duplicate for seamless scroll loop
   }
   renderTape();
+
+  // ================================================================
+  // Live backend integration
+  // ================================================================
+  const BACKEND = 'http://localhost:8000';
+
+  async function checkStatus(){
+    const dot = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    try{
+      const res = await fetch(`${BACKEND}/api/status`);
+      const data = await res.json();
+      dot.className = 'status-dot up';
+      text.innerHTML = `Live backend connected — data: <strong>${data.data_source}</strong> · `
+        + `Ollama: <strong>${data.ollama_available ? 'connected (real LLM)' : 'unavailable, using MockLLM'}</strong> · `
+        + `${data.rows_loaded.toLocaleString()} rows loaded. "Run live" buttons below will execute for real.`;
+    }catch(e){
+      dot.className = 'status-dot down';
+      text.innerHTML = 'Live backend not reachable at localhost:8000 — static verified-run numbers above are still real, '
+        + 'but "Run live" buttons need the backend running (see web/backend/README.md).';
+    }
+  }
+  checkStatus();
+
+  function setLoading(btn, loading){
+    btn.disabled = loading;
+    btn.dataset.orig = btn.dataset.orig || btn.textContent;
+    btn.textContent = loading ? '⏳ Running…' : btn.dataset.orig;
+  }
+
+  function showError(el, msg){
+    el.className = 'live-result show';
+    el.innerHTML = `<div class="live-error">⚠ ${msg}</div>`;
+  }
+
+  async function runTrackA(btn){
+    const el = document.getElementById('trackA-live');
+    setLoading(btn, true);
+    try{
+      const res = await fetch(`${BACKEND}/api/track-a/run-cycle`, {method:'POST'});
+      if(!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+      el.className = 'live-result show';
+      el.innerHTML = `
+        <div class="meta">seed ${d.seed} · computed in ${d.elapsed_sec}s · ${d.data_source}</div>
+        <div class="bar-row"><div class="bar-label">v1 baseline recall</div><div class="bar-track"><div class="bar-fill bar-v1" style="width:${d.v1_baseline.recall*100}%;"><span>${d.v1_baseline.recall}</span></div></div></div>
+        <div class="bar-row"><div class="bar-label">v1 adversarial recall</div><div class="bar-track"><div class="bar-fill bar-v1" style="width:${d.v1_adversarial.recall*100}%;"><span>${d.v1_adversarial.recall}</span></div></div></div>
+        <div class="bar-row"><div class="bar-label">v2 fresh adversarial recall</div><div class="bar-track"><div class="bar-fill bar-v2" style="width:${d.v2_fresh_adversarial.recall*100}%;"><span>${d.v2_fresh_adversarial.recall}</span></div></div></div>
+        <div class="meta" style="margin-top:8px;">${d.hard_examples_fed_back} hard examples fed back this cycle</div>`;
+    }catch(e){
+      showError(el, `Backend not reachable — start it: cd web/backend && uvicorn main:app --port 8000`);
+    }
+    setLoading(btn, false);
+  }
+
+  async function runTrackB(btn, sku, injected){
+    const idMap = {
+      'SKU_HP_001-false': 'trackB-live-clean',
+      'SKU_HP_001-true': 'trackB-live-hp-injected',
+      'SKU_WATCH_002-true': 'trackB-live-watch-injected',
+    };
+    const el = document.getElementById(idMap[`${sku}-${injected}`]);
+    setLoading(btn, true);
+    try{
+      const res = await fetch(`${BACKEND}/api/track-b/run-scenario`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({sku, injected}),
+      });
+      if(!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+      const chipClass = d.gated.decision === 'ALLOW' ? 'chip-allow' : d.gated.decision === 'ESCALATE' ? 'chip-escalate' : 'chip-block';
+      el.className = 'live-result show';
+      el.innerHTML = `
+        <div class="meta">${d.elapsed_sec}s · ${d.using_real_llm ? 'real Ollama call' : 'MockLLM (Ollama unavailable)'}</div>
+        <div class="kv"><span class="k">naive mandate</span><span class="mono">${d.naive.mandate.merchant_id} / $${d.naive.mandate.amount}</span></div>
+        <div class="kv"><span class="k">gate decision</span><span class="verdict-chip ${chipClass}">${d.gated.decision}</span></div>
+        <div class="meta" style="margin-top:8px;">${d.gated.reasoning_trace.join(' · ')}</div>`;
+    }catch(e){
+      showError(el, `Backend not reachable — start it: cd web/backend && uvicorn main:app --port 8000`);
+    }
+    setLoading(btn, false);
+  }
+
+  async function runTrackCAudio(btn, which){
+    const el = document.getElementById(`trackC-audio-${which}`);
+    setLoading(btn, true);
+    try{
+      const res = await fetch(`${BACKEND}/api/track-c/detect-audio?which=${which}`, {method:'POST'});
+      if(!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+      const real = d.scores.find(s => s.label === 'real');
+      const fake = d.scores.find(s => s.label === 'fake');
+      el.className = 'live-result show';
+      el.innerHTML = `
+        <div class="meta">${d.elapsed_sec}s · live inference</div>
+        <div class="kv"><span class="k">real</span><span class="mono">${(real.score*100).toFixed(3)}%</span></div>
+        <div class="kv"><span class="k">fake</span><span class="mono">${(fake.score*100).toFixed(4)}%</span></div>`;
+    }catch(e){
+      showError(el, `Backend not reachable, or file missing in web/frontend/media/`);
+    }
+    setLoading(btn, false);
+  }
+
+  async function runTrackCVideo(btn, which){
+    const el = document.getElementById('trackC-video-live');
+    setLoading(btn, true);
+    try{
+      const res = await fetch(`${BACKEND}/api/track-c/detect-video?which=${which}`, {method:'POST'});
+      if(!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+      el.className = 'live-result show';
+      el.innerHTML = `
+        <div class="meta">${which} video · ${d.elapsed_sec}s · ${d.n_frames_with_face || 0} frames with face detected</div>
+        <div class="kv"><span class="k">SNR</span><span class="mono">${d.snr_db !== null ? d.snr_db + ' dB' : 'n/a'}</span></div>
+        <div class="kv"><span class="k">peak BPM</span><span class="mono">${d.peak_bpm !== null ? d.peak_bpm : 'n/a'}</span></div>`;
+    }catch(e){
+      showError(el, `Backend not reachable, or file missing in web/frontend/media/`);
+    }
+    setLoading(btn, false);
+  }
+
+  async function runTrackD(btn){
+    const el = document.getElementById('trackD-live');
+    setLoading(btn, true);
+    try{
+      const res = await fetch(`${BACKEND}/api/track-d/run-cycle`, {method:'POST'});
+      if(!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+      el.className = 'live-result show';
+      el.innerHTML = `
+        <div class="meta">seed ${d.seed} · ${d.elapsed_sec}s · ${d.data_source}</div>
+        <div class="bar-row"><div class="bar-label">poisoned retrain recall</div><div class="bar-track"><div class="bar-fill bar-poison" style="width:${d.poisoned_retrain.recall*100}%;"><span>${d.poisoned_retrain.recall}</span></div></div></div>
+        <div class="bar-row"><div class="bar-label">defended retrain recall</div><div class="bar-track"><div class="bar-fill bar-defend" style="width:${d.defended_retrain.recall*100}%;"><span>${d.defended_retrain.recall}</span></div></div></div>
+        <div class="meta" style="margin-top:8px;">poison caught: ${d.screening.poison_quarantined}/${d.screening.total_poison_in_batch} (${(d.screening.poison_catch_rate*100).toFixed(1)}%) · clean rows wrongly quarantined: ${d.screening.clean_rows_wrongly_quarantined}</div>`;
+    }catch(e){
+      showError(el, `Backend not reachable — start it: cd web/backend && uvicorn main:app --port 8000`);
+    }
+    setLoading(btn, false);
+  }
 </script>
 
 </body>
