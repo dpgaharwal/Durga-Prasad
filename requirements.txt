@@ -1,0 +1,21 @@
+# Track A - tabular fraud (fully working, tested, no GPU/API needed)
+pandas
+numpy
+scikit-learn
+xgboost
+scipy
+
+# Track B - agentic (working, tested with MockLLM)
+langgraph
+langchain-core
+# langchain-ollama   # uncomment once running on your machine with Ollama
+
+# Track C - deepfake (add on Colab, needs GPU)
+# torch
+# TTS                # Coqui XTTS
+# openvoice2
+# (SadTalker installed separately, see their repo setup script)
+
+# Web backend (add for Phase 4)
+# fastapi
+# uvicorn
