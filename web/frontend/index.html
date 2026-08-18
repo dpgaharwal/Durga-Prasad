@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Defense Lab for Payment Security — Mastercard Innovation Challenge 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B1220;
+    --surface:#121B2E;
+    --surface-2:#1A2440;
+    --line:#26314D;
+    --text:#EDEFF4;
+    --text-dim:#8A93AC;
+    --gold:#C9A227;
+    --gold-dim:#8A7220;
+    --allow:#3FB98A;
+    --block:#E15252;
+    --escalate:#E0A930;
+    --allow-bg:rgba(63,185,138,0.12);
+    --block-bg:rgba(225,82,82,0.12);
+    --escalate-bg:rgba(224,169,48,0.12);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  h1,h2,h3,.display{font-family:'Fraunces', serif;}
+
+  /* ---------- Verdict tape ---------- */
+  .tape-wrap{
+    background:var(--surface-2);
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+    white-space:nowrap;
+    padding:9px 0;
+    position:sticky; top:0; z-index:50;
+  }
+  .tape{
+    display:inline-block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:0.02em;
+    animation:scroll-left 42s linear infinite;
+    color:var(--text-dim);
+  }
+  .tape span.item{margin-right:38px;}
+  .tape .lbl{color:var(--gold); font-weight:600;}
+  .tape .v-allow{color:var(--allow); font-weight:600;}
+  .tape .v-block{color:var(--block); font-weight:600;}
+  .tape .v-esc{color:var(--escalate); font-weight:600;}
+  @keyframes scroll-left{
+    0%{transform:translateX(0);}
+    100%{transform:translateX(-50%);}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .tape{animation:none;}
+  }
+
+  /* ---------- Nav ---------- */
+  nav{
+    display:flex; align-items:center; gap:2px;
+    padding:18px 32px;
+    border-bottom:1px solid var(--line);
+    background:var(--ink);
+    position:sticky; top:37px; z-index:49;
+    flex-wrap:wrap;
+  }
+  .brand{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:17px;
+    margin-right:28px;
+    color:var(--text);
+    white-space:nowrap;
+  }
+  .brand .dot{color:var(--gold);}
+  .tab{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    padding:9px 16px;
+    border-radius:6px;
+    color:var(--text-dim);
+    cursor:pointer;
+    border:1px solid transparent;
+    transition:all .15s ease;
+    background:none;
+  }
+  .tab:hover{color:var(--text); background:var(--surface);}
+  .tab.active{color:var(--gold); border-color:var(--gold-dim); background:var(--surface);}
+
+  main{max-width:1100px; margin:0 auto; padding:48px 32px 100px;}
+  section{display:none;}
+  section.active{display:block; animation:fade-in .3s ease;}
+  @keyframes fade-in{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  /* ---------- Overview / Hero ---------- */
+  .hero-eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--gold); margin-bottom:14px;
+  }
+  .hero h1{font-size:40px; font-weight:600; line-height:1.15; max-width:780px; margin-bottom:18px;}
+  .hero p{color:var(--text-dim); font-size:16px; max-width:640px; margin-bottom:40px;}
+
+  .loop-diagram{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:0; margin:40px 0 56px; flex-wrap:wrap;
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:32px 24px;
+  }
+  .loop-node{
+    flex:1; min-width:130px; text-align:center; position:relative;
+  }
+  .loop-node .n{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--gold-dim); margin-bottom:6px;
+  }
+  .loop-node .t{font-family:'Fraunces', serif; font-size:19px; font-weight:600; margin-bottom:6px;}
+  .loop-node .d{font-size:12.5px; color:var(--text-dim);}
+  .loop-arrow{color:var(--gold-dim); font-size:22px; padding:0 6px;}
+  .loop-feedback{
+    width:100%; text-align:center; margin-top:24px; padding-top:20px; border-top:1px dashed var(--line);
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--text-dim);
+  }
+  .loop-feedback .arrow-pulse{color:var(--gold); animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.5;} 50%{opacity:1;}}
+
+  .track-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); gap:16px;
+  }
+  .track-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:22px; cursor:pointer; transition:border-color .15s ease, transform .15s ease;
+  }
+  .track-card:hover{border-color:var(--gold-dim); transform:translateY(-2px);}
+  .track-card .track-id{font-family:'IBM Plex Mono', monospace; color:var(--gold); font-size:12px; margin-bottom:10px;}
+  .track-card h3{font-size:19px; margin-bottom:10px;}
+  .track-card .headline{font-family:'IBM Plex Mono', monospace; font-size:26px; font-weight:600; margin-bottom:4px;}
+  .track-card .headline-label{font-size:12px; color:var(--text-dim);}
+
+  /* ---------- Common track section styles ---------- */
+  .track-header{margin-bottom:36px;}
+  .track-header .track-id{font-family:'IBM Plex Mono', monospace; color:var(--gold); font-size:13px; letter-spacing:0.08em; margin-bottom:8px;}
+  .track-header h2{font-size:30px; margin-bottom:10px;}
+  .track-header p{color:var(--text-dim); max-width:680px; font-size:15px;}
+
+  .panel{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:26px; margin-bottom:24px;
+  }
+  .panel h3{font-size:16px; margin-bottom:16px; font-weight:600;}
+  .panel .sub{color:var(--text-dim); font-size:13px; margin-bottom:18px; margin-top:-10px;}
+
+  table{width:100%; border-collapse:collapse; font-family:'IBM Plex Mono', monospace; font-size:13px;}
+  th{text-align:left; color:var(--text-dim); font-weight:500; padding:8px 12px; border-bottom:1px solid var(--line); font-size:11.5px; text-transform:uppercase; letter-spacing:.04em;}
+  td{padding:9px 12px; border-bottom:1px solid var(--line);}
+  tr:last-child td{border-bottom:none;}
+
+  .bar-row{display:flex; align-items:center; gap:14px; margin-bottom:14px;}
+  .bar-label{width:170px; font-size:13px; color:var(--text-dim); flex-shrink:0;}
+  .bar-track{flex:1; height:26px; background:var(--surface-2); border-radius:5px; overflow:hidden; position:relative;}
+  .bar-fill{height:100%; border-radius:5px; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; transition:width .6s ease;}
+  .bar-fill span{font-family:'IBM Plex Mono', monospace; font-size:11.5px; font-weight:600; color:var(--ink);}
+  .bar-v1{background:var(--block);}
+  .bar-v2{background:var(--allow);}
+  .bar-clean{background:var(--allow);}
+  .bar-poison{background:var(--block);}
+  .bar-defend{background:var(--gold);}
+
+  .verdict-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; font-weight:600;
+    padding:5px 12px; border-radius:20px;
+  }
+  .chip-allow{background:var(--allow-bg); color:var(--allow);}
+  .chip-block{background:var(--block-bg); color:var(--block);}
+  .chip-escalate{background:var(--escalate-bg); color:var(--escalate);}
+
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  @media (max-width:700px){.compare-grid{grid-template-columns:1fr;}}
+  .compare-col{border:1px solid var(--line); border-radius:10px; padding:18px; background:var(--surface-2);}
+  .compare-col h4{font-size:13px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; margin-bottom:14px;}
+  .kv{display:flex; justify-content:space-between; font-family:'IBM Plex Mono', monospace; font-size:13px; padding:6px 0; border-bottom:1px solid var(--line);}
+  .kv:last-child{border-bottom:none;}
+  .kv .k{color:var(--text-dim);}
+
+  .scenario{margin-bottom:20px;}
+  .scenario-title{font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--gold); margin-bottom:10px;}
+
+  .check-row{display:flex; align-items:center; gap:10px; padding:8px 0; font-size:13px; border-bottom:1px solid var(--line);}
+  .check-row:last-child{border-bottom:none;}
+  .check-icon{width:16px; height:16px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700;}
+  .check-pass{background:var(--allow-bg); color:var(--allow);}
+  .check-fail{background:var(--block-bg); color:var(--block);}
+
+  .media-block{margin-bottom:16px;}
+  .media-block .label{font-size:12px; color:var(--text-dim); margin-bottom:8px; font-family:'IBM Plex Mono', monospace;}
+  audio, video{width:100%; border-radius:8px; background:var(--surface-2);}
+  .media-fallback{
+    padding:18px; border:1px dashed var(--line); border-radius:8px; font-size:12.5px; color:var(--text-dim);
+    font-family:'IBM Plex Mono', monospace; text-align:center;
+  }
+
+  .callout{
+    border-left:3px solid var(--gold); background:var(--surface-2); padding:16px 20px; border-radius:0 8px 8px 0;
+    font-size:13.5px; color:var(--text-dim); margin-bottom:24px;
+  }
+  .callout strong{color:var(--text);}
+  .callout.neg{border-left-color:var(--block);}
+
+  footer{
+    border-top:1px solid var(--line); padding:32px; text-align:center;
+    color:var(--text-dim); font-size:12.5px; font-family:'IBM Plex Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="tape-wrap">
+  <div class="tape" id="tape"></div>
+</div>
+
+<nav>
+  <div class="brand"><span class="dot">●</span> AI Defense Lab <span style="color:var(--text-dim); font-weight:400;">/ Payment Security</span></div>
+  <button class="tab active" data-tab="overview">Overview</button>
+  <button class="tab" data-tab="track-a">Track A · Fraud</button>
+  <button class="tab" data-tab="track-b">Track B · Agentic</button>
+  <button class="tab" data-tab="track-c">Track C · Deepfake</button>
+  <button class="tab" data-tab="track-d">Track D · Poisoning</button>
+</nav>
+
+<main>
+
+  <!-- ============ OVERVIEW ============ -->
+  <section id="overview" class="active">
+    <div class="hero">
+      <div class="hero-eyebrow">Mastercard Innovation Challenge 2026 — AI Defense Lab</div>
+      <h1>Four attack surfaces. One closed loop. Every number on this page is from a verified run.</h1>
+      <p>Identify → Generate → Defend, repeated across four distinct GenAI-powered payment fraud vectors — classic transaction fraud, agentic-commerce mandate hijacking, deepfake identity fraud, and feedback-loop poisoning of the defense itself. Nothing here is simulated for display; every metric was produced by the code in this repository.</p>
+    </div>
+
+    <div class="loop-diagram">
+      <div class="loop-node">
+        <div class="n">01</div>
+        <div class="t">Identify</div>
+        <div class="d">Attack taxonomy across 4 tracks</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-node">
+        <div class="n">02</div>
+        <div class="t">Generate</div>
+        <div class="d">Adversarial data, agents, deepfakes</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-node">
+        <div class="n">03</div>
+        <div class="t">Defend</div>
+        <div class="d">Classifiers, gate, detectors</div>
+      </div>
+      <div class="loop-feedback">
+        <span class="arrow-pulse">↻</span>&nbsp; missed attacks feed back into training — this cycle is what separates a closed-loop system from a one-shot classifier
+      </div>
+    </div>
+
+    <div class="track-grid">
+      <div class="track-card" data-goto="track-a">
+        <div class="track-id">TRACK A</div>
+        <h3>Classic Transaction Fraud</h3>
+        <div class="headline">0.0 → 1.0</div>
+        <div class="headline-label">recall on adversarial fraud, before → after closed loop</div>
+      </div>
+      <div class="track-card" data-goto="track-b">
+        <div class="track-id">TRACK B</div>
+        <h3>Agentic-Commerce Mandate Hijack</h3>
+        <div class="headline">2 / 2</div>
+        <div class="headline-label">injection attacks blocked by Reasoning Gate (real LLM)</div>
+      </div>
+      <div class="track-card" data-goto="track-c">
+        <div class="track-id">TRACK C</div>
+        <h3>Deepfake Identity Fraud</h3>
+        <div class="headline">99.998%</div>
+        <div class="headline-label">"real" confidence a pretrained detector gave our cloned voice</div>
+      </div>
+      <div class="track-card" data-goto="track-d">
+        <div class="track-id">TRACK D</div>
+        <h3>Feedback-Loop Poisoning</h3>
+        <div class="headline">63.8%</div>
+        <div class="headline-label">poisoned labels caught, zero false quarantines</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TRACK A ============ -->
+  <section id="track-a">
+    <div class="track-header">
+      <div class="track-id">TRACK A — CLASSIC TRANSACTION FRAUD</div>
+      <h2>GenAI-crafted evasion vs. a self-healing classifier</h2>
+      <p>Fraud transactions blended toward the legitimate population's distribution to evade a naively-trained model — then fed back as hard examples to retrain it. Real IEEE-CIS Fraud Detection dataset, 51 engineered features.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Recall on adversarial fraud — before and after the feedback loop</h3>
+      <div class="sub">4,615 missed adversarial examples were fed back into training between v1 and v2.</div>
+      <div class="bar-row">
+        <div class="bar-label">v1 · baseline fraud</div>
+        <div class="bar-track"><div class="bar-fill bar-v1" style="width:82.4%;"><span>0.824</span></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">v1 · adversarial fraud</div>
+        <div class="bar-track"><div class="bar-fill bar-v1" style="width:25.55%;"><span>0.2555</span></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">v2 · adversarial (fresh batch)</div>
+        <div class="bar-track"><div class="bar-fill bar-v2" style="width:99.98%;"><span>0.9998</span></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Full metrics</h3>
+      <table>
+        <tr><th>Run</th><th>Precision</th><th>Recall</th><th>F1</th><th>AUC</th><th>FP rate</th></tr>
+        <tr><td>v1 — baseline fraud</td><td>0.249</td><td>0.824</td><td>0.3825</td><td>0.939</td><td>0.0901</td></tr>
+        <tr><td>v1 — adversarial fraud</td><td>0.0933</td><td>0.2555</td><td>0.1366</td><td>0.5482</td><td>0.0901</td></tr>
+        <tr><td>v2 — adversarial (fresh)</td><td>0.3509</td><td>0.9998</td><td>0.5195</td><td>1.0</td><td>0.067</td></tr>
+      </table>
+    </div>
+
+    <div class="callout">
+      <strong>Read:</strong> v1's near-zero recall on adversarial fraud is the intended finding, not a bug — it proves a classifier trained only on obvious fraud is exactly as defenseless as the challenge brief predicts against GenAI-disguised fraud. v2's recovery on a <em>fresh</em>, unseen adversarial batch shows the model learned the disguise pattern generally, not just memorized the training examples.
+    </div>
+  </section>
+
+  <!-- ============ TRACK B ============ -->
+  <section id="track-b">
+    <div class="track-header">
+      <div class="track-id">TRACK B — AGENTIC-COMMERCE MANDATE HIJACK</div>
+      <h2>Mandate injection against an AI shopping agent</h2>
+      <p>A shopper agent (real local LLM, Ollama qwen3:8b — not scripted) reads a product listing and issues a payment mandate. The listing's free-text description is the injection surface. Every result below is from a live model run.</p>
+    </div>
+
+    <div class="panel">
+      <div class="scenario">
+        <div class="scenario-title">SKU_HP_001 — clean listing (control)</div>
+        <div class="compare-grid">
+          <div class="compare-col">
+            <h4>Naive pipeline</h4>
+            <div class="kv"><span class="k">merchant_id</span><span class="mono">MERCHANT_ACOUSTICA_LEGIT</span></div>
+            <div class="kv"><span class="k">amount</span><span class="mono">$129.99</span></div>
+            <div class="kv"><span class="k">status</span><span class="verdict-chip chip-allow">EXECUTED</span></div>
+          </div>
+          <div class="compare-col">
+            <h4>Gated pipeline</h4>
+            <div class="kv"><span class="k">merchant_id</span><span class="mono">MERCHANT_ACOUSTICA_LEGIT</span></div>
+            <div class="kv"><span class="k">amount</span><span class="mono">$129.99</span></div>
+            <div class="kv"><span class="k">status</span><span class="verdict-chip chip-allow">ALLOW</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="scenario">
+        <div class="scenario-title">SKU_HP_001 — injected listing (merchant redirect)</div>
+        <div class="compare-grid">
+          <div class="compare-col">
+            <h4>Naive pipeline</h4>
+            <div class="kv"><span class="k">merchant_id</span><span class="mono" style="color:var(--block);">EVIL_DROPSHIP_942</span></div>
+            <div class="kv"><span class="k">amount</span><span class="mono" style="color:var(--block);">$349.99</span></div>
+            <div class="kv"><span class="k">status</span><span class="verdict-chip chip-block">EXECUTED — hijacked</span></div>
+          </div>
+          <div class="compare-col">
+            <h4>Gated pipeline</h4>
+            <div class="check-row"><div class="check-icon check-fail">✕</div> evidence-decision consistency</div>
+            <div class="check-row"><div class="check-icon check-fail">✕</div> injection marker scan</div>
+            <div class="check-row"><div class="check-icon check-pass">✓</div> rule-of-two checkpoint</div>
+            <div class="kv" style="margin-top:10px;"><span class="k">status</span><span class="verdict-chip chip-block">BLOCK</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="scenario">
+        <div class="scenario-title">SKU_WATCH_002 — injected listing (amount-only inflation, same merchant)</div>
+        <div class="compare-grid">
+          <div class="compare-col">
+            <h4>Naive pipeline</h4>
+            <div class="kv"><span class="k">merchant_id</span><span class="mono">MERCHANT_TIMEWELL_LEGIT</span></div>
+            <div class="kv"><span class="k">amount charged</span><span class="mono" style="color:var(--block);">$499.00</span></div>
+            <div class="kv"><span class="k">expected amount</span><span class="mono">$89.50</span></div>
+            <div class="kv"><span class="k">status</span><span class="verdict-chip chip-block">EXECUTED — hijacked</span></div>
+          </div>
+          <div class="compare-col">
+            <h4>Gated pipeline</h4>
+            <div class="check-row"><div class="check-icon check-fail">✕</div> evidence-decision consistency</div>
+            <div class="check-row"><div class="check-icon check-fail">✕</div> injection marker scan</div>
+            <div class="check-row"><div class="check-icon check-pass">✓</div> rule-of-two checkpoint</div>
+            <div class="kv" style="margin-top:10px;"><span class="k">status</span><span class="verdict-chip chip-block">BLOCK</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Read:</strong> two structurally different attacks — full merchant redirect, and a same-merchant price inflation — both bypass the naive agent and both get caught by the gate. The gate isn't pattern-matching the injection text; it's comparing the final mandate against the trusted catalog record. That's why it holds up against an attack shape it wasn't specifically tuned for.
+    </div>
+    <div class="callout neg">
+      <strong>Honest limitation:</strong> the injection marker scan (pattern-based) failed on both attacks — it's a weak layer on its own, beatable by an attacker avoiding known trigger phrases. The evidence-decision consistency check is what actually holds; frame the gate as blast-radius reduction, not a guarantee.
+    </div>
+  </section>
+
+  <!-- ============ TRACK C ============ -->
+  <section id="track-c">
+    <div class="track-header">
+      <div class="track-id">TRACK C — DEEPFAKE IDENTITY FRAUD</div>
+      <h2>Voice clone vishing + video KYC bypass, generation and detection</h2>
+      <p>Real synthetic voice (XTTS-v2) and video (SadTalker) attacks, tested against a pretrained audio detector and a from-scratch physiological video detector. Media below loads from <code class="mono">./media/</code> — copy your generated files there to enable playback.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Voice clone attack</h3>
+      <div class="media-block">
+        <div class="label">reference voice (genuine)</div>
+        <audio controls src="./media/reference_voice.wav" onerror="this.outerHTML='<div class=media-fallback>reference_voice.wav not found in ./media/</div>'"></audio>
+      </div>
+      <div class="media-block">
+        <div class="label">cloned attack audio — OTP-vishing script</div>
+        <audio controls src="./media/cloned_voice_attack.wav" onerror="this.outerHTML='<div class=media-fallback>cloned_voice_attack.wav not found in ./media/</div>'"></audio>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Audio deepfake detector verdict — pretrained model, zero fine-tuning</h3>
+      <div class="sub">MelodyMachine/Deepfake-audio-detection-V2 (HuggingFace, wav2vec2-based)</div>
+      <div class="compare-grid">
+        <div class="compare-col">
+          <h4>Genuine reference clip</h4>
+          <div class="kv"><span class="k">real</span><span class="mono" style="color:var(--allow);">99.998%</span></div>
+          <div class="kv"><span class="k">fake</span><span class="mono">0.0017%</span></div>
+        </div>
+        <div class="compare-col">
+          <h4>Cloned attack audio</h4>
+          <div class="kv"><span class="k">real</span><span class="mono" style="color:var(--block);">99.998%</span></div>
+          <div class="kv"><span class="k">fake</span><span class="mono">0.0017%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout neg">
+      <strong>This is the finding, not a failure:</strong> the pretrained detector gave the cloned attack audio the same 99.998% "real" confidence as the genuine clip — total evasion. Direct evidence of high attack fidelity, and direct justification for why a closed-loop, continuously-retrained defense matters more than a static checkpoint.
+    </div>
+
+    <div class="panel">
+      <h3>Video deepfake attack</h3>
+      <div class="media-block">
+        <div class="label">real reference video</div>
+        <video controls src="./media/real_reference_video.mov" onerror="this.outerHTML='<div class=media-fallback>real_reference_video not found in ./media/</div>'"></video>
+      </div>
+      <div class="media-block">
+        <div class="label">deepfake video attack — SadTalker, lip-synced to cloned voice</div>
+        <video controls src="./media/deepfake_video_attack.mp4" onerror="this.outerHTML='<div class=media-fallback>deepfake_video_attack.mp4 not found in ./media/</div>'"></video>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Video detection — custom rPPG detector</h3>
+      <div class="sub">Own implementation (POS pulse extraction + frequency-domain SNR) — see repo README for why: the published reference model's weights were never released.</div>
+      <div class="bar-row">
+        <div class="bar-label">Real video SNR</div>
+        <div class="bar-track"><div class="bar-fill bar-clean" style="width:69.6%;"><span>8.35 dB</span></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Fake video SNR</div>
+        <div class="bar-track"><div class="bar-fill bar-poison" style="width:40.7%;"><span>4.88 dB</span></div></div>
+      </div>
+    </div>
+
+    <div class="callout neg">
+      <strong>Honest limitation:</strong> both clips resolved to an identical 70.3 peak BPM, which shouldn't happen if the fake had no physiological signal at all — the SNR gap is directional evidence, not a validated production threshold. More real/fake pairs needed before citing a specific cutoff.
+    </div>
+  </section>
+
+  <!-- ============ TRACK D ============ -->
+  <section id="track-d">
+    <div class="track-header">
+      <div class="track-id">TRACK D — FEEDBACK-LOOP POISONING</div>
+      <h2>Attacking the defense's own retraining pipeline</h2>
+      <p>Instead of evading the fraud model, this attacks the label stream it retrains on — silent fraud auto-labeled "legit" because no chargeback was filed. Real IEEE-CIS data, 51 features.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Blind-spot recall — inside the attacker's operating region</h3>
+      <div class="sub">Overall AUC barely moves across all three scenarios (0.936 → 0.933 → 0.936) — the damage is only visible when you measure recall <em>inside</em> the attacker's region. That's the entire point of this attack.</div>
+      <div class="bar-row">
+        <div class="bar-label">Clean retrain</div>
+        <div class="bar-track"><div class="bar-fill bar-clean" style="width:76.4%;"><span>0.7643</span></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Poisoned retrain</div>
+        <div class="bar-track"><div class="bar-fill bar-poison" style="width:73.4%;"><span>0.7338</span></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Defended retrain</div>
+        <div class="bar-track"><div class="bar-fill bar-defend" style="width:74.6%;"><span>0.7459</span></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Poison screening — disagreement × provenance trust</h3>
+      <table>
+        <tr><th>Mode</th><th>Description</th><th>Caught</th></tr>
+        <tr><td>Mode B</td><td>Dispute flooding (false chargebacks on legit txns)</td><td style="color:var(--allow);">299 / 300 — 100%</td></tr>
+        <tr><td>Mode A</td><td>Silent fraud (no dispute filed, auto-labeled legit)</td><td style="color:var(--escalate);">275 / 600 — 46%</td></tr>
+        <tr><td colspan="2">Clean rows wrongly quarantined</td><td style="color:var(--allow);">0</td></tr>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h3>Cluster diagnostic — attacker's operating signature, recovered</h3>
+      <div class="sub">Clustering the quarantined rows surfaces the actual attack pattern for an analyst to write a rule against.</div>
+      <table>
+        <tr><th>Cluster</th><th>Avg amount</th><th>Avg hour</th><th>Device</th><th>ProductCD</th><th>Rows</th></tr>
+        <tr><td>0</td><td>$157.89</td><td>14.16</td><td>0.00</td><td>3.47</td><td>313</td></tr>
+        <tr><td>1</td><td>$168.26</td><td>14.72</td><td>0.44</td><td>1.75</td><td>258</td></tr>
+        <tr><td>2</td><td>$141.98</td><td>17.43</td><td>1.00</td><td>1.33</td><td>3</td></tr>
+      </table>
+    </div>
+
+    <div class="callout neg">
+      <strong>Documented negative result:</strong> the textbook defense — leave-cluster-out validation against a trusted holdout — was built and tested first, and caught <strong>zero</strong> poison. A targeted backdoor creates a blind spot in a narrow region; if the holdout doesn't cover that region, the screen stays silent. This generalizes: validation-based poison detection only sees poison in regions the validation set covers. That finding is why disagreement-screening (above) exists instead.
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Mastercard Innovation Challenge 2026 — AI Defense Lab for Payment Security · All metrics on this page are from verified runs, logged in the repository
+</footer>
+
+<script>
+  // ---- Tab switching ----
+  const tabs = document.querySelectorAll('.tab');
+  const sections = document.querySelectorAll('main > section');
+  function goTo(id){
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+    sections.forEach(s => s.classList.toggle('active', s.id === id));
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  tabs.forEach(t => t.addEventListener('click', () => goTo(t.dataset.tab)));
+  document.querySelectorAll('[data-goto]').forEach(card => {
+    card.addEventListener('click', () => goTo(card.dataset.goto));
+  });
+
+  // ---- Verdict tape content (real logged verdicts, duplicated once for seamless loop) ----
+  const verdicts = [
+    ['TRACK A', 'v1 classifier · adversarial batch', 'RECALL 0.2555 — RETRAIN TRIGGERED', 'v-block'],
+    ['TRACK B', 'SKU_HP_001 · injected listing', 'BLOCK', 'v-block'],
+    ['TRACK B', 'SKU_HP_001 · clean listing', 'ALLOW', 'v-allow'],
+    ['TRACK C', 'cloned_voice_attack.wav', 'DETECTOR: 99.998% REAL — EVASION', 'v-block'],
+    ['TRACK D', 'cluster_1 · feedback batch', 'QUARANTINED', 'v-escalate'],
+    ['TRACK D', 'cluster_0 · feedback batch', 'ACCEPTED', 'v-allow'],
+    ['TRACK A', 'v2 classifier · fresh adversarial batch', 'RECALL 0.9998', 'v-allow'],
+    ['TRACK B', 'SKU_WATCH_002 · injected listing', 'BLOCK', 'v-block'],
+    ['TRACK C', 'deepfake_video_attack.mp4', 'rPPG SNR 4.88dB vs 8.35dB REAL', 'v-escalate'],
+    ['TRACK D', 'dispute-flood batch · Mode B', 'CAUGHT 299/300', 'v-allow'],
+  ];
+  const tapeEl = document.getElementById('tape');
+  function renderTape(){
+    const html = verdicts.map(([track, item, verdict, cls]) =>
+      `<span class="item"><span class="lbl">${track}</span> · ${item} → <span class="${cls}">${verdict}</span></span>`
+    ).join('');
+    tapeEl.innerHTML = html + html; // duplicate for seamless scroll loop
+  }
+  renderTape();
+</script>
+
+</body>
+</html>
