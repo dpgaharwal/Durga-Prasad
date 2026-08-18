@@ -150,7 +150,7 @@ def run_scenario(sku: str, goal: str, use_injected_content: bool, llm):
 
 
 if __name__ == "__main__":
-    llm = MockLLM()   # swap to OllamaLLM(model="llama3.1") on your machine
+    llm = OllamaLLM(model="qwen3:8b")   # was MockLLM() -- now using real reasoning
 
     print("=" * 78)
     print("TRACK B - MANDATE INJECTION ATTACK vs REASONING GATE")
