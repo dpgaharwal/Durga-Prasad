@@ -4,8 +4,16 @@ Track A - Defense classifier.
 Trains an XGBoost classifier and reports precision/recall/F1/AUC plus the
 false-positive rate on legitimate payments (called out explicitly in the
 challenge brief -- keep FP low).
+
+FEATURES here is the canonical list -- generate/track_a_transactions imports
+it (via real_data_loader.FEATURE_COLUMNS, kept in sync) and
+defend/track_d_label_defense/label_provenance.py imports FEATURES directly
+from this file, so there is one source of truth instead of duplicated lists
+that can drift out of sync and cause shape-mismatch errors.
 """
 
+import sys
+import os
 import xgboost as xgb
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -13,18 +21,17 @@ from sklearn.metrics import (
     precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 )
 
-FEATURES = [
-    "TransactionAmt", "TransactionHour", "card_type", "ProductCD",
-    "email_match", "device_type", "distance",
-    "C1", "C2", "C3", "C4", "C5", "D1", "D2", "D3",
-]
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../generate/track_a_transactions"))
+from real_data_loader import FEATURE_COLUMNS
+
+FEATURES = FEATURE_COLUMNS
 
 
 def train_classifier(train_df: pd.DataFrame) -> xgb.XGBClassifier:
     model = xgb.XGBClassifier(
-        n_estimators=200,
-        max_depth=5,
-        learning_rate=0.1,
+        n_estimators=300,
+        max_depth=6,
+        learning_rate=0.08,
         eval_metric="auc",
         scale_pos_weight=(train_df.isFraud == 0).sum() / max((train_df.isFraud == 1).sum(), 1),
         random_state=42,
@@ -55,7 +62,6 @@ def evaluate(model: xgb.XGBClassifier, test_df: pd.DataFrame, label: str = "") -
 
 
 if __name__ == "__main__":
-    import sys
     sys.path.append("../../generate/track_a_transactions")
     from synthetic_baseline import generate_baseline
     from adversarial_generator import generate_adversarial_fraud
@@ -72,7 +78,7 @@ if __name__ == "__main__":
     train_v1 = pd.concat([train_df, train_fraud], ignore_index=True)
     model_v1 = train_classifier(train_v1)
 
+    print(f"Training on {len(FEATURES)} features")
     print("=== v1 classifier: trained WITHOUT adversarial examples ===")
     print(evaluate(model_v1, pd.concat([test_legit, test_fraud]), "baseline fraud"))
     print(evaluate(model_v1, pd.concat([test_legit, adv]), "adversarial fraud"))
-    print(">> expect recall to drop hard on adversarial set -- that's the evasion working")

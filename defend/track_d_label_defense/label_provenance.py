@@ -46,21 +46,20 @@ it is a good finding for the writeup, and it generalises: validation-based
 poison detection only sees poison in regions the validation set covers.
 """
 
+import sys
+import os
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../defend/track_a_classifier"))
+from train_and_evaluate import FEATURES  # single source of truth -- see that file's docstring
 
 PROVENANCE_TRUST = {
     "analyst_confirmed": 1.0,      # human investigator confirmed the outcome
     "customer_dispute": 0.6,       # cardholder filed a dispute (abusable)
     "no_dispute_default": 0.3,     # nobody complained, so we assumed legit
 }
-
-FEATURES = [
-    "TransactionAmt", "TransactionHour", "card_type", "ProductCD",
-    "email_match", "device_type", "distance",
-    "C1", "C2", "C3", "C4", "C5", "D1", "D2", "D3",
-]
 
 
 def provenance_weights(df: pd.DataFrame, default: float = 0.5) -> np.ndarray:
