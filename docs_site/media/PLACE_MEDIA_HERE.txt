@@ -1,0 +1,11 @@
+Copy these files from your Track C Colab outputs into this folder,
+using these exact names, to enable playback in the dashboard:
+
+  reference_voice.wav          (your genuine reference clip)
+  cloned_voice_attack.wav      (Section 1 output)
+  real_reference_video.mov     (Section 4 real comparison clip)
+  deepfake_video_attack.mp4    (the _h264.mp4 version, for browser compatibility)
+
+If a file is missing, the dashboard shows a clean "not found" placeholder
+instead of a broken player -- it won't look broken during a demo either way,
+but with the files in place it plays real audio/video.
