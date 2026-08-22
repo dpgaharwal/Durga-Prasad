@@ -635,6 +635,7 @@
   // Live backend integration
   // ================================================================
   const BACKEND = 'http://localhost:8000';
+  const IS_HOSTED = window.location.hostname.includes('github.io');
 
   async function checkStatus(){
     const dot = document.getElementById('statusDot');
@@ -647,9 +648,14 @@
         + `Ollama: <strong>${data.ollama_available ? 'connected (real LLM)' : 'unavailable, using MockLLM'}</strong> · `
         + `${data.rows_loaded.toLocaleString()} rows loaded. "Run live" buttons below will execute for real.`;
     }catch(e){
-      dot.className = 'status-dot down';
-      text.innerHTML = 'Live backend not reachable at localhost:8000 — static verified-run numbers above are still real, '
-        + 'but "Run live" buttons need the backend running (see web/backend/README.md).';
+      dot.className = 'status-dot';
+      if (IS_HOSTED) {
+        text.innerHTML = 'This is the hosted static version — every number shown is from a real verified run, logged in the repo. '
+          + '"Run live" buttons need the backend running locally (it is not hosted here) — clone the repo and see web/backend/README.md to try them yourself.';
+      } else {
+        text.innerHTML = 'Live backend not reachable at localhost:8000 — static verified-run numbers above are still real, '
+          + 'but "Run live" buttons need the backend running (see web/backend/README.md).';
+      }
     }
   }
   checkStatus();
@@ -663,6 +669,13 @@
   function showError(el, msg){
     el.className = 'live-result show';
     el.innerHTML = `<div class="live-error">⚠ ${msg}</div>`;
+  }
+
+  function liveUnavailableMsg(extra){
+    if (IS_HOSTED) {
+      return `This is the hosted static version — the backend runs locally, not here. Clone the repo and see web/backend/README.md to try this live.`;
+    }
+    return `Backend not reachable — start it: cd web/backend && uvicorn main:app --port 8000${extra ? ' · ' + extra : ''}`;
   }
 
   async function runTrackA(btn){
@@ -680,7 +693,7 @@
         <div class="bar-row"><div class="bar-label">v2 fresh adversarial recall</div><div class="bar-track"><div class="bar-fill bar-v2" style="width:${d.v2_fresh_adversarial.recall*100}%;"><span>${d.v2_fresh_adversarial.recall}</span></div></div></div>
         <div class="meta" style="margin-top:8px;">${d.hard_examples_fed_back} hard examples fed back this cycle</div>`;
     }catch(e){
-      showError(el, `Backend not reachable — start it: cd web/backend && uvicorn main:app --port 8000`);
+      showError(el, liveUnavailableMsg());
     }
     setLoading(btn, false);
   }
@@ -708,7 +721,7 @@
         <div class="kv"><span class="k">gate decision</span><span class="verdict-chip ${chipClass}">${d.gated.decision}</span></div>
         <div class="meta" style="margin-top:8px;">${d.gated.reasoning_trace.join(' · ')}</div>`;
     }catch(e){
-      showError(el, `Backend not reachable — start it: cd web/backend && uvicorn main:app --port 8000`);
+      showError(el, liveUnavailableMsg());
     }
     setLoading(btn, false);
   }
@@ -728,7 +741,7 @@
         <div class="kv"><span class="k">real</span><span class="mono">${(real.score*100).toFixed(3)}%</span></div>
         <div class="kv"><span class="k">fake</span><span class="mono">${(fake.score*100).toFixed(4)}%</span></div>`;
     }catch(e){
-      showError(el, `Backend not reachable, or file missing in web/frontend/media/`);
+      showError(el, liveUnavailableMsg("or file missing in web/frontend/media/"));
     }
     setLoading(btn, false);
   }
@@ -746,7 +759,7 @@
         <div class="kv"><span class="k">SNR</span><span class="mono">${d.snr_db !== null ? d.snr_db + ' dB' : 'n/a'}</span></div>
         <div class="kv"><span class="k">peak BPM</span><span class="mono">${d.peak_bpm !== null ? d.peak_bpm : 'n/a'}</span></div>`;
     }catch(e){
-      showError(el, `Backend not reachable, or file missing in web/frontend/media/`);
+      showError(el, liveUnavailableMsg("or file missing in web/frontend/media/"));
     }
     setLoading(btn, false);
   }
@@ -768,7 +781,7 @@
         <div class="meta" style="margin-top:8px;">overall AUC (barely moves): clean ${d.clean_retrain.auc} → poisoned ${d.poisoned_retrain.auc} → defended ${d.defended_retrain.auc}</div>
         <div class="meta" style="margin-top:4px;">poison caught: ${d.screening.poison_quarantined}/${d.screening.total_poison_in_batch} (${(d.screening.poison_catch_rate*100).toFixed(1)}%) · clean rows wrongly quarantined: ${d.screening.clean_rows_wrongly_quarantined}</div>`;
     }catch(e){
-      showError(el, `Backend not reachable — start it: cd web/backend && uvicorn main:app --port 8000`);
+      showError(el, liveUnavailableMsg());
     }
     setLoading(btn, false);
   }
