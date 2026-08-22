@@ -278,4 +278,4 @@ Stated plainly, not hidden in footnotes:
 
 ---
 
-**Team:** Durga Prasad · [Solution Walkthrough](docs/Durga%20Prasad.docx) · [Live Prototype](https://dpgaharwal.github.io/Durga-Prasad/)
+**Team:** Durga Prasad · [Solution Walkthrough](docs/DurgaPrasad.docx) · [Live Prototype](https://dpgaharwal.github.io/Durga-Prasad/)
