@@ -63,13 +63,16 @@ IEEE_DATA_DIR = os.path.join(REPO_ROOT, "generate", "track_a_transactions", "iee
 # backend trades some scale for the ability to actually recompute live.
 # ----------------------------------------------------------------------
 
-STATE = {"data_source": None, "df": None, "legit": None, "fraud": None,
+STATE = {"data_source": None, "train_df": None,
+         "legit_train": None, "fraud_train": None,
+         "legit_test": None, "fraud_test": None,
          "v1_model": None, "ollama_available": False, "llm": None}
 
 
 def _load_data():
     from real_data_loader import load_real_data
     from synthetic_baseline import generate_baseline
+    from sklearn.model_selection import train_test_split
 
     if os.path.isdir(IEEE_DATA_DIR) and os.path.exists(
         os.path.join(IEEE_DATA_DIR, "train_transaction.csv")
@@ -81,14 +84,25 @@ def _load_data():
         df = generate_baseline(n_legit=15000, n_fraud=600, seed=1)
         STATE["data_source"] = "synthetic (ieee_data/ not found -- see README)"
 
-    STATE["df"] = df
-    STATE["legit"] = df[df.isFraud == 0]
-    STATE["fraud"] = df[df.isFraud == 1]
+    legit, fraud = df[df.isFraud == 0], df[df.isFraud == 1]
+    # Proper held-out split -- v1 is trained ONLY on the train side, and every
+    # live-cycle evaluation below runs against the test side it never saw.
+    # (An earlier version of this endpoint evaluated against the same data
+    # v1 was trained on -- in-sample "evaluation" that made v1 look far
+    # better than it actually generalizes. Fixed here.)
+    train_legit, test_legit = train_test_split(legit, test_size=0.3, random_state=1)
+    train_fraud, test_fraud = train_test_split(fraud, test_size=0.3, random_state=1)
+
+    STATE["train_df"] = pd.concat([train_legit, train_fraud], ignore_index=True)
+    STATE["legit_train"] = train_legit
+    STATE["fraud_train"] = train_fraud
+    STATE["legit_test"] = test_legit
+    STATE["fraud_test"] = test_fraud
 
 
 def _train_v1():
     from train_and_evaluate import train_classifier
-    STATE["v1_model"] = train_classifier(STATE["df"])
+    STATE["v1_model"] = train_classifier(STATE["train_df"])
 
 
 def _init_llm():
@@ -123,7 +137,7 @@ def status():
     return {
         "data_source": STATE["data_source"],
         "ollama_available": STATE["ollama_available"],
-        "rows_loaded": len(STATE["df"]) if STATE["df"] is not None else 0,
+        "rows_loaded": len(STATE["train_df"]) + len(STATE["legit_test"]) + len(STATE["fraud_test"]),
     }
 
 
@@ -139,21 +153,28 @@ def track_a_run_cycle():
     t0 = time.time()
     seed = random.randint(1, 1_000_000)  # fresh each call -- genuinely live, not cached
 
-    legit, fraud = STATE["legit"], STATE["fraud"]
+    legit_test, fraud_test = STATE["legit_test"], STATE["fraud_test"]
+    legit_train = STATE["legit_train"]
     model_v1 = STATE["v1_model"]
 
-    adv = generate_adversarial_fraud(fraud, legit, evasion_strength=0.6, seed=seed)
-    baseline_result = evaluate(model_v1, pd.concat([legit, fraud]), "v1 baseline")
-    adv_result = evaluate(model_v1, pd.concat([legit, adv]), "v1 adversarial")
+    # Adversarial fraud generated from HELD-OUT fraud (v1 never trained on
+    # these rows, clean or disguised) -- blending reference is the legit
+    # population v1 WAS trained on, since that's the distribution an attacker
+    # would be trying to blend into.
+    adv = generate_adversarial_fraud(fraud_test, legit_train, evasion_strength=0.6, seed=seed)
+    baseline_result = evaluate(model_v1, pd.concat([legit_test, fraud_test]), "v1 baseline (held-out)")
+    adv_result = evaluate(model_v1, pd.concat([legit_test, adv]), "v1 adversarial (held-out)")
 
     # live retrain with the missed examples as hard examples
     X_adv = adv[model_v1.feature_names_in_.tolist()]
     missed = adv[model_v1.predict(X_adv) == 0]
-    train_v2 = pd.concat([STATE["df"], missed], ignore_index=True)
+    train_v2 = pd.concat([STATE["train_df"], missed], ignore_index=True)
     model_v2 = train_classifier(train_v2)
 
-    adv2 = generate_adversarial_fraud(fraud, legit, evasion_strength=0.6, seed=seed + 1)
-    v2_result = evaluate(model_v2, pd.concat([legit, adv2]), "v2 fresh adversarial")
+    # Evaluate v2 on a FRESH held-out adversarial batch (different seed,
+    # simulates the next attack wave, not the same rows just trained on)
+    adv2 = generate_adversarial_fraud(fraud_test, legit_train, evasion_strength=0.6, seed=seed + 1)
+    v2_result = evaluate(model_v2, pd.concat([legit_test, adv2]), "v2 fresh adversarial (held-out)")
 
     return {
         "seed": seed,
@@ -308,41 +329,64 @@ def track_c_detect_video(which: str):
 
 @app.post("/api/track-d/run-cycle")
 def track_d_run_cycle():
-    from feedback_poisoner import build_poisoned_feedback
+    from feedback_poisoner import build_poisoned_feedback, stamp_signature
     from label_provenance import disagreement_screen, poison_recall
-    from train_and_evaluate import train_classifier, evaluate
+    from train_and_evaluate import train_classifier, evaluate, FEATURES
 
     t0 = time.time()
     seed = random.randint(1, 1_000_000)
 
-    legit, fraud = STATE["legit"], STATE["fraud"]
-    base_train = STATE["df"]
+    legit_train, fraud_train = STATE["legit_train"], STATE["fraud_train"]
+    legit_test, fraud_test = STATE["legit_test"], STATE["fraud_test"]
+    base_train = STATE["train_df"]
     base_model = STATE["v1_model"]
 
+    def blind_spot_recall(model):
+        """
+        Recall specifically on fraud stamped into the attacker's operating
+        region -- NOT overall recall. This is the metric that actually shows
+        the attack: overall AUC/recall barely move by design (that's the
+        whole point of this track), so overall recall alone is too noisy on
+        a small live-cycle batch to tell the story. Matches the offline
+        verified-run script's methodology for an apples-to-apples comparison
+        with the static panel above.
+        """
+        region_fraud = stamp_signature(fraud_test, seed=99)
+        preds = model.predict(region_fraud[FEATURES])
+        return round(float(preds.mean()), 4)
+
     clean_feedback = pd.concat([
-        legit.sample(min(300, len(legit)), random_state=seed),
-        fraud.sample(min(80, len(fraud)), random_state=seed),
+        legit_train.sample(min(300, len(legit_train)), random_state=seed),
+        fraud_train.sample(min(80, len(fraud_train)), random_state=seed),
     ], ignore_index=True)
     clean_feedback["label_source"] = "analyst_confirmed"
 
     poisoned_batch = build_poisoned_feedback(
-        clean_feedback, fraud_pool=fraud, legit_pool=legit,
+        clean_feedback, fraud_pool=fraud_train, legit_pool=legit_train,
         n_silent=400, n_dispute=200, seed=seed,
     )
 
+    model_clean = train_classifier(pd.concat([base_train, clean_feedback], ignore_index=True))
+    clean_metrics = evaluate(model_clean, pd.concat([legit_test, fraud_test]), "clean retrain (held-out)")
+    clean_blind_spot = blind_spot_recall(model_clean)
+
     model_poisoned = train_classifier(pd.concat([base_train, poisoned_batch], ignore_index=True))
-    poisoned_metrics = evaluate(model_poisoned, pd.concat([legit, fraud]), "poisoned retrain")
+    poisoned_metrics = evaluate(model_poisoned, pd.concat([legit_test, fraud_test]), "poisoned retrain (held-out)")
+    poisoned_blind_spot = blind_spot_recall(model_poisoned)
 
     accepted, quarantined, _ = disagreement_screen(poisoned_batch, base_model, suspicion_threshold=0.05)
     model_defended = train_classifier(pd.concat([base_train, accepted], ignore_index=True))
-    defended_metrics = evaluate(model_defended, pd.concat([legit, fraud]), "defended retrain")
+    defended_metrics = evaluate(model_defended, pd.concat([legit_test, fraud_test]), "defended retrain (held-out)")
+    defended_blind_spot = blind_spot_recall(model_defended)
+
     screening = poison_recall(quarantined, poisoned_batch)
 
     return {
         "seed": seed,
         "elapsed_sec": round(time.time() - t0, 2),
-        "poisoned_retrain": poisoned_metrics,
-        "defended_retrain": defended_metrics,
+        "clean_retrain": {**clean_metrics, "blind_spot_recall": clean_blind_spot},
+        "poisoned_retrain": {**poisoned_metrics, "blind_spot_recall": poisoned_blind_spot},
+        "defended_retrain": {**defended_metrics, "blind_spot_recall": defended_blind_spot},
         "screening": screening,
         "data_source": STATE["data_source"],
     }

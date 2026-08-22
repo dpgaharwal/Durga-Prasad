@@ -761,9 +761,12 @@
       el.className = 'live-result show';
       el.innerHTML = `
         <div class="meta">seed ${d.seed} · ${d.elapsed_sec}s · ${d.data_source}</div>
-        <div class="bar-row"><div class="bar-label">poisoned retrain recall</div><div class="bar-track"><div class="bar-fill bar-poison" style="width:${d.poisoned_retrain.recall*100}%;"><span>${d.poisoned_retrain.recall}</span></div></div></div>
-        <div class="bar-row"><div class="bar-label">defended retrain recall</div><div class="bar-track"><div class="bar-fill bar-defend" style="width:${d.defended_retrain.recall*100}%;"><span>${d.defended_retrain.recall}</span></div></div></div>
-        <div class="meta" style="margin-top:8px;">poison caught: ${d.screening.poison_quarantined}/${d.screening.total_poison_in_batch} (${(d.screening.poison_catch_rate*100).toFixed(1)}%) · clean rows wrongly quarantined: ${d.screening.clean_rows_wrongly_quarantined}</div>`;
+        <div class="meta" style="margin-top:4px; margin-bottom:8px;">Blind-spot recall (inside attacker's region) — the metric that actually shows this attack, overall recall barely moves by design:</div>
+        <div class="bar-row"><div class="bar-label">clean blind-spot recall</div><div class="bar-track"><div class="bar-fill bar-clean" style="width:${d.clean_retrain.blind_spot_recall*100}%;"><span>${d.clean_retrain.blind_spot_recall}</span></div></div></div>
+        <div class="bar-row"><div class="bar-label">poisoned blind-spot recall</div><div class="bar-track"><div class="bar-fill bar-poison" style="width:${d.poisoned_retrain.blind_spot_recall*100}%;"><span>${d.poisoned_retrain.blind_spot_recall}</span></div></div></div>
+        <div class="bar-row"><div class="bar-label">defended blind-spot recall</div><div class="bar-track"><div class="bar-fill bar-defend" style="width:${d.defended_retrain.blind_spot_recall*100}%;"><span>${d.defended_retrain.blind_spot_recall}</span></div></div></div>
+        <div class="meta" style="margin-top:8px;">overall AUC (barely moves): clean ${d.clean_retrain.auc} → poisoned ${d.poisoned_retrain.auc} → defended ${d.defended_retrain.auc}</div>
+        <div class="meta" style="margin-top:4px;">poison caught: ${d.screening.poison_quarantined}/${d.screening.total_poison_in_batch} (${(d.screening.poison_catch_rate*100).toFixed(1)}%) · clean rows wrongly quarantined: ${d.screening.clean_rows_wrongly_quarantined}</div>`;
     }catch(e){
       showError(el, `Backend not reachable — start it: cd web/backend && uvicorn main:app --port 8000`);
     }

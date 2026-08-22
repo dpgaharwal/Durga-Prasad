@@ -135,17 +135,32 @@ def build_gated_graph(llm):
 
 
 def run_scenario(sku: str, goal: str, use_injected_content: bool, llm):
-    naive = build_naive_graph(llm)
-    gated = build_gated_graph(llm)
+    """
+    Single shared agent decision, then two POLICIES applied to it (naive vs
+    gated) -- not two independent agent runs.
 
-    naive_result = naive.invoke({
+    Earlier version called build_naive_graph() and build_gated_graph()
+    separately, each invoking the LLM fresh. With MockLLM (deterministic)
+    that was harmless. With a real LLM (non-deterministic even at low
+    temperature), two independent calls for "the same" scenario can produce
+    slightly different phrasing -- e.g. "ACOUSTICA_LEGIT" vs
+    "MERCHANT_ACOUSTICA_LEGIT" -- which made the gate's exact-match check
+    look inconsistent on a clean listing that should trivially ALLOW. That
+    was a comparison-harness bug, not a finding about the gate itself. Fixed
+    by deciding once and branching.
+    """
+    shared_state: AgentState = {
         "goal": goal, "sku": sku, "use_injected_content": use_injected_content,
         "reasoning_trace": [],
-    })
-    gated_result = gated.invoke({
-        "goal": goal, "sku": sku, "use_injected_content": use_injected_content,
-        "reasoning_trace": [],
-    })
+    }
+    shared_state = node_search(shared_state)
+    shared_state = make_node_shopper_decide(llm)(shared_state)
+
+    naive_result = node_execute_naive({**shared_state, "reasoning_trace": list(shared_state["reasoning_trace"])})
+
+    gated_result = node_reasoning_gate({**shared_state, "reasoning_trace": list(shared_state["reasoning_trace"])})
+    gated_result = node_execute_gated(gated_result)
+
     return naive_result, gated_result
 
 
