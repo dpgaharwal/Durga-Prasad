@@ -49,11 +49,17 @@ import pandas as pd
 # The attacker's operating niche. All poisoned fraud is confined here so the
 # resulting blind spot is targeted and aggregate metrics stay clean.
 ATTACKER_SIGNATURE = {
-    "card_type": 1,
+    "card_type": 1,              # credit -- always populated from card6, unlike device_type
     "ProductCD": 2,
-    "amount_range": (150, 250),
-    "TransactionHour_range": (14, 16),
+    "amount_range": (150, 250),  # narrower band
+    "TransactionHour_range": (14, 16),   # narrower, 2-hour window
 }
+# NOTE: device_type dropped from the signature. On the real IEEE-CIS dataset,
+# ~76% of rows have no identity record, so device_type defaults to 0 for the
+# vast majority of ALL transactions (legit and fraud alike). Using it as a
+# signature filter matched a huge, generic slice instead of a narrow niche,
+# which diluted the whole point of the attack (a TARGETED blind spot). card_type
+# is derived from card6 (debit/credit), which is populated for ~all rows.
 
 
 def stamp_signature(df: pd.DataFrame, seed: int = 11) -> pd.DataFrame:

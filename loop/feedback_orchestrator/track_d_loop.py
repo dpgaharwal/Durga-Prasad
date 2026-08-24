@@ -27,7 +27,7 @@ sys.path.append(os.path.join(HERE, "../../generate/track_d_poisoning"))
 sys.path.append(os.path.join(HERE, "../../defend/track_a_classifier"))
 sys.path.append(os.path.join(HERE, "../../defend/track_d_label_defense"))
 
-from real_data_loader import load_real_data
+from synthetic_baseline import generate_baseline
 from train_and_evaluate import train_classifier, evaluate, FEATURES
 from feedback_poisoner import (
     build_poisoned_feedback, stamp_signature, matches_signature,
@@ -45,7 +45,7 @@ def blind_spot_recall(model, fraud_test: pd.DataFrame) -> float:
 
 
 def run_track_d(seed: int = 42):
-    df = load_real_data(data_dir="../../generate/track_a_transactions/ieee_data")
+    df = generate_baseline(seed=seed)
     legit = df[df.isFraud == 0]
     fraud = df[df.isFraud == 1]
 

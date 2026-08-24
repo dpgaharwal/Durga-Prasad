@@ -8,6 +8,7 @@ scipy
 # Track B - agentic (working, tested with MockLLM)
 langgraph
 langchain-core
+langchain-openai   # for hosted deployment (Railway) via OpenAI API
 # langchain-ollama   # uncomment once running on your machine with Ollama
 
 # Track C - deepfake (add on Colab, needs GPU)
@@ -16,6 +17,8 @@ langchain-core
 # openvoice2
 # (SadTalker installed separately, see their repo setup script)
 
-# Web backend (add for Phase 4)
-# fastapi
-# uvicorn
+# Web backend (Phase 4 - live re-run endpoints)
+fastapi
+uvicorn
+python-multipart
+langchain-ollama

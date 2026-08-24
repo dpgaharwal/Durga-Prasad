@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../generate/track_a_transactions"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../defend/track_a_classifier"))
 
-from real_data_loader import load_real_data
+from synthetic_baseline import generate_baseline
 from adversarial_generator import generate_adversarial_fraud
 from train_and_evaluate import train_classifier, evaluate
 
@@ -33,7 +33,7 @@ from train_and_evaluate import train_classifier, evaluate
 
 
 def run_closed_loop(evasion_strength: float = 0.6, seed: int = 42):
-    df = load_real_data(data_dir="../../generate/track_a_transactions/ieee_data")
+    df = generate_baseline(seed=seed)
     legit = df[df.isFraud == 0]
     fraud = df[df.isFraud == 1]
 
