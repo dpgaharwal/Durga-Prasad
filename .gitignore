@@ -5,3 +5,4 @@ __pycache__/
 ieee_data/
 *.zip
 !generate/track_a_transactions/deploy_subsample.csv
+!web/backend/deploy_subsample.csv
