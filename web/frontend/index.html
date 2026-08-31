@@ -376,7 +376,7 @@
     <div class="track-header">
       <div class="track-id">TRACK B — AGENTIC-COMMERCE MANDATE HIJACK</div>
       <h2>Mandate injection against an AI shopping agent</h2>
-      <p>A shopper agent (real local LLM, Ollama qwen3:8b — not scripted) reads a product listing and issues a payment mandate. The listing's free-text description is the injection surface. Every result below is from a live model run.</p>
+      <p>A shopper agent (real LLM, not scripted) reads a product listing and issues a payment mandate. The listing's free-text description is the injection surface. Every result below is from a live model run.</p>
     </div>
 
     <div class="panel">
@@ -708,7 +708,7 @@
       const chipClass = d.gated.decision === 'ALLOW' ? 'chip-allow' : d.gated.decision === 'ESCALATE' ? 'chip-escalate' : 'chip-block';
       el.className = 'live-result show';
       el.innerHTML = `
-        <div class="meta">${d.elapsed_sec}s · ${d.using_real_llm ? 'real Ollama call' : 'MockLLM (Ollama unavailable)'}</div>
+        <div class="meta">${d.elapsed_sec}s · ${d.llm_backend || (d.using_real_llm ? 'real LLM call' : 'MockLLM')}</div>
         <div class="kv"><span class="k">naive mandate</span><span class="mono">${d.naive.mandate.merchant_id} / $${d.naive.mandate.amount}</span></div>
         <div class="kv"><span class="k">gate decision</span><span class="verdict-chip ${chipClass}">${d.gated.decision}</span></div>
         <div class="meta" style="margin-top:8px;">${d.gated.reasoning_trace.join(' · ')}</div>`;
