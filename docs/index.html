@@ -461,7 +461,7 @@
     <div class="track-header">
       <div class="track-id">TRACK C — DEEPFAKE IDENTITY FRAUD</div>
       <h2>Voice clone vishing + video KYC bypass, generation and detection</h2>
-      <p>Real synthetic voice (XTTS-v2) and video (SadTalker) attacks, tested against a pretrained audio detector and a from-scratch physiological video detector. Media below loads from <code class="mono">./media/</code> — copy your generated files there to enable playback. <strong>Generation is necessarily pre-computed (GPU minutes) — detection below runs live on these files.</strong></p>
+      <p>Real synthetic voice (XTTS-v2) and video (SadTalker) attacks, tested against a pretrained audio detector and a from-scratch physiological video detector. <strong>Both generation and detection for this track are pre-computed</strong> — generation needs GPU minutes (same constraint every team has), and the detection models are too heavy (~2GB+) to run on this hosted page. Every number below is from a verified local run, not a placeholder.</p>
     </div>
 
     <div class="panel">
@@ -478,27 +478,24 @@
 
     <div class="panel">
       <h3>Audio deepfake detector verdict — pretrained model, zero fine-tuning</h3>
-      <div class="sub">MelodyMachine/Deepfake-audio-detection-V2 (HuggingFace, wav2vec2-based)</div>
+      <div class="sub">MelodyMachine/Deepfake-audio-detection-V2 (HuggingFace, wav2vec2-based) — result from a verified run; this detector needs a ~2GB model download, so it runs locally only, not on this hosted page</div>
       <div class="compare-grid">
         <div class="compare-col">
           <h4>Genuine reference clip</h4>
           <div class="kv"><span class="k">real</span><span class="mono" style="color:var(--allow);">99.998%</span></div>
           <div class="kv"><span class="k">fake</span><span class="mono">0.0017%</span></div>
-          <button class="live-btn" style="margin-top:12px; width:100%;" onclick="runTrackCAudio(this,'genuine')">▶ Run detector live</button>
-          <div class="live-result" id="trackC-audio-genuine"></div>
         </div>
         <div class="compare-col">
           <h4>Cloned attack audio</h4>
           <div class="kv"><span class="k">real</span><span class="mono" style="color:var(--block);">99.998%</span></div>
           <div class="kv"><span class="k">fake</span><span class="mono">0.0017%</span></div>
-          <button class="live-btn" style="margin-top:12px; width:100%;" onclick="runTrackCAudio(this,'cloned')">▶ Run detector live</button>
-          <div class="live-result" id="trackC-audio-cloned"></div>
         </div>
       </div>
     </div>
 
     <div class="callout neg">
-      <strong>This is the finding, not a failure:</strong> the pretrained detector gave the cloned attack audio the same 99.998% "real" confidence as the genuine clip — total evasion. Direct evidence of high attack fidelity, and direct justification for why a closed-loop, continuously-retrained defense matters more than a static checkpoint.
+      <strong>This is the finding, not a failure:</strong> the pretrained detector gave the cloned attack audio the same 99.998% "real" confidence as the genuine clip — total evasion.
+      Direct evidence of high attack fidelity, and direct justification for why a closed-loop, continuously-retrained defense matters more than a static checkpoint.
     </div>
 
     <div class="panel">
@@ -515,7 +512,7 @@
 
     <div class="panel">
       <h3>Video detection — custom rPPG detector</h3>
-      <div class="sub">Own implementation (POS pulse extraction + frequency-domain SNR) — see repo README for why: the published reference model's weights were never released.</div>
+      <div class="sub">Own implementation (POS pulse extraction + frequency-domain SNR) — result from a verified local run; see repo README for why this isn't a pretrained checkpoint: the published reference model's weights were never released.</div>
       <div class="bar-row">
         <div class="bar-label">Real video SNR</div>
         <div class="bar-track"><div class="bar-fill bar-clean" style="width:69.6%;"><span>8.35 dB</span></div></div>
@@ -524,11 +521,6 @@
         <div class="bar-label">Fake video SNR</div>
         <div class="bar-track"><div class="bar-fill bar-poison" style="width:40.7%;"><span>4.88 dB</span></div></div>
       </div>
-      <div style="display:flex; gap:10px; margin-top:6px;">
-        <button class="live-btn" onclick="runTrackCVideo(this,'real')">▶ Run on real video</button>
-        <button class="live-btn" onclick="runTrackCVideo(this,'fake')">▶ Run on fake video</button>
-      </div>
-      <div class="live-result" id="trackC-video-live"></div>
     </div>
 
     <div class="callout neg">
@@ -645,7 +637,7 @@
       const data = await res.json();
       dot.className = 'status-dot up';
       text.innerHTML = `Live backend connected — data: <strong>${data.data_source}</strong> · `
-        + `Ollama: <strong>${data.ollama_available ? 'connected (real LLM)' : 'unavailable, using MockLLM'}</strong> · `
+        + `LLM: <strong>${data.llm_backend || (data.ollama_available ? 'connected (real LLM)' : 'MockLLM')}</strong> · `
         + `${data.rows_loaded.toLocaleString()} rows loaded. "Run live" buttons below will execute for real.`;
     }catch(e){
       dot.className = 'status-dot';
@@ -726,43 +718,10 @@
     setLoading(btn, false);
   }
 
-  async function runTrackCAudio(btn, which){
-    const el = document.getElementById(`trackC-audio-${which}`);
-    setLoading(btn, true);
-    try{
-      const res = await fetch(`${BACKEND}/api/track-c/detect-audio?which=${which}`, {method:'POST'});
-      if(!res.ok) throw new Error(await res.text());
-      const d = await res.json();
-      const real = d.scores.find(s => s.label === 'real');
-      const fake = d.scores.find(s => s.label === 'fake');
-      el.className = 'live-result show';
-      el.innerHTML = `
-        <div class="meta">${d.elapsed_sec}s · live inference</div>
-        <div class="kv"><span class="k">real</span><span class="mono">${(real.score*100).toFixed(3)}%</span></div>
-        <div class="kv"><span class="k">fake</span><span class="mono">${(fake.score*100).toFixed(4)}%</span></div>`;
-    }catch(e){
-      showError(el, liveUnavailableMsg("or file missing in web/frontend/media/"));
-    }
-    setLoading(btn, false);
-  }
-
-  async function runTrackCVideo(btn, which){
-    const el = document.getElementById('trackC-video-live');
-    setLoading(btn, true);
-    try{
-      const res = await fetch(`${BACKEND}/api/track-c/detect-video?which=${which}`, {method:'POST'});
-      if(!res.ok) throw new Error(await res.text());
-      const d = await res.json();
-      el.className = 'live-result show';
-      el.innerHTML = `
-        <div class="meta">${which} video · ${d.elapsed_sec}s · ${d.n_frames_with_face || 0} frames with face detected</div>
-        <div class="kv"><span class="k">SNR</span><span class="mono">${d.snr_db !== null ? d.snr_db + ' dB' : 'n/a'}</span></div>
-        <div class="kv"><span class="k">peak BPM</span><span class="mono">${d.peak_bpm !== null ? d.peak_bpm : 'n/a'}</span></div>`;
-    }catch(e){
-      showError(el, liveUnavailableMsg("or file missing in web/frontend/media/"));
-    }
-    setLoading(btn, false);
-  }
+  // Track C has no "Run live" JS handlers -- both generation and detection
+  // are pre-computed (GPU-bound generation, ~2GB+ detection models too heavy
+  // for this hosted page). The verified numbers are shown as static content
+  // above, same as any other confirmed result in this dashboard.
 
   async function runTrackD(btn){
     const el = document.getElementById('trackD-live');
