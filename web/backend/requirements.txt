@@ -1,12 +1,3 @@
-# Railway deployment requirements -- deliberately excludes torch/transformers
-# (Track C's audio detector, ~2GB) and opencv/scipy (Track C's video detector)
-# to keep the deploy fast and reliably within free/cheap tier build limits.
-#
-# Tracks A, B, D work fully on this deploy. Track C's detect-audio and
-# detect-video endpoints will fail gracefully (500, not a crash) since those
-# imports are lazy (only loaded when those specific endpoints are called) --
-# Track C stays local-only for now, which the dashboard already explains.
-
 fastapi
 uvicorn
 pydantic
@@ -14,6 +5,5 @@ pandas
 numpy
 scikit-learn
 xgboost
-langgraph
 langchain-core
 langchain-openai
